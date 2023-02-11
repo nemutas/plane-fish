@@ -7,8 +7,6 @@ import { shaders } from './shaders'
 gsap.registerPlugin(ScrollTrigger)
 
 export class TCanvas {
-  private target = 0.00001
-
   constructor(private parentNode: ParentNode) {
     this.init()
     this.createLights()
@@ -128,6 +126,9 @@ export class TCanvas {
 
   // ----------------------------------
   // animation
+  private targetSpeed = 0
+  private speed = 0
+
   private createScrollAnimation() {
     let prev = 0
     ScrollTrigger.create({
@@ -136,15 +137,20 @@ export class TCanvas {
       end: 'bottom bottom',
       scrub: 1,
       onUpdate: (e) => {
-        this.target = e.progress - prev
+        this.targetSpeed = e.progress - prev
         prev = e.progress
       },
     })
   }
 
   private anime = () => {
-    this.target = THREE.MathUtils.lerp(this.target, 0, 0.05)
-    const dt = Math.sign(this.target) * gl.time.delta + this.target * 10
+    // ターゲットとなるスピード（スクロール量の差分）は、徐々に0に減衰していく
+    this.targetSpeed = THREE.MathUtils.lerp(this.targetSpeed, 0, 0.05)
+    // スピードは、ターゲットに向かっていく
+    this.speed = THREE.MathUtils.lerp(this.speed, this.targetSpeed, 0.05)
+
+    const direction = this.speed < 0 ? -1 : 1
+    const dt = direction * gl.time.delta + this.speed * 10
 
     const topUniforms = gl.getMesh<THREE.MeshStandardMaterial>('top-plane').material.userData.uniforms
     if (topUniforms) {
